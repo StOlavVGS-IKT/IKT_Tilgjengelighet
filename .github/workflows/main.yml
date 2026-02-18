@@ -10,7 +10,7 @@ permissions:
 
 env:
   # VIKTIG: korrekt owner-navn i lowercase (med tallet 0)
-  IMAGE_NAME: ghcr.io/s0lavvgs-ikt/status-display
+  IMAGE_NAME: ghcr.io/stolavvgs-ikt/status-display
 
 jobs:
   build:
