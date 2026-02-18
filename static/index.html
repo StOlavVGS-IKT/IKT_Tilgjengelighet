@@ -1,1 +1,80 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Statusdisplay</title>
+<style>
+  :root {
+    --green:#22C55E; --orange:#F59E0B; --blue:#3B82F6; --gray:#6B7280;
+  }
+  html, body { height:100%; margin:0; }
+  body {
+    display:flex; align-items:center; justify-content:center;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    color:#fff; background:#000; text-align:center;
+    transition: background 0.3s ease;
+  }
+  .wrap { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+  .title { font-size:9vw; line-height:1.1; padding:3vw; text-shadow:0 2px 10px rgba(0,0,0,.25); }
+  .bg-img { position:fixed; inset:0; background-position:center; background-size:cover; filter:saturate(1); }
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.25); }
+</style>
+</head>
+<body>
+<div id="img" class="bg-img" style="display:none;"></div>
+<div class="overlay" id="ovl" style="display:none;"></div>
+<div class="wrap">
+  <div class="title" id="title">Laster…</div>
+</div>
 
+<script>
+const title = document.getElementById('title');
+const bg = document.getElementById('img');
+const ovl = document.getElementById('ovl');
+
+function setVisual(status){
+  title.textContent = status;
+
+  // Prøv å bruke bilde hvis det finnes
+  const slug = status
+    .normalize('NFD').replace(/[æÆ]/g,'ae').replace(/[øØ]/g,'o').replace(/[åÅ]/g,'a')
+    .replace(/\s+/g,'-').toLowerCase().replace(/[^a-z0-9\-_]/g,'');
+
+  const imgUrl = `/static/content/${slug}.png`;
+
+  // Test bilde med "preload"
+  const img = new Image();
+  img.onload = () => {
+    bg.style.backgroundImage = `url('${imgUrl}')`;
+    bg.style.display = 'block';
+    ovl.style.display = 'block';
+    document.body.style.background = '#000';
+  };
+  img.onerror = () => {
+    bg.style.display = 'none';
+    ovl.style.display = 'none';
+    // fallback farger
+    if(status === 'Tilgjengelig') document.body.style.background = 'var(--green)';
+    else if(status === 'Møte') document.body.style.background = 'var(--orange)';
+    else if(status === 'Ute på oppdrag') document.body.style.background = 'var(--blue)';
+    else document.body.style.background = 'var(--gray)';
+  };
+  img.src = imgUrl;
+}
+
+async function poll(){
+  try{
+    const r = await fetch('/api/status', {cache:'no-store'});
+    const j = await r.json();
+    setVisual(j.status);
+  }catch(e){
+    title.textContent = 'Offline';
+    document.body.style.background = '#000';
+  }
+}
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>
