@@ -1,0 +1,61 @@
+name: Manual Docker Image CI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  # Sett image-navn (lowercase). Bytt 'status-display' til ditt ønskede navn.
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/status-display
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            # tag for branch med kort sha, f.eks. main-<sha7>
+            type=ref,event=branch,suffix=-{{sha}}
+            # tag for PR
+            type=ref,event=pr,suffix=-{{sha}}
+            # semver tags hvis du tagger releases som v1.2.3
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            # ren sha
+            type=sha
+          flavor: |
+            latest=true
+
+      - name: Build and push (multi-arch optional)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # Fjern/endre til bare linux/amd64 hvis du ikke trenger arm64
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
