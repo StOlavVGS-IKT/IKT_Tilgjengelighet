@@ -9,8 +9,8 @@ permissions:
   id-token: write
 
 env:
-  # Sett image-navn (lowercase). Bytt 'status-display' til ditt ønskede navn.
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/status-display
+  # Viktig: hold hele banen i lowercase for GHCR
+  IMAGE_NAME: ghcr.io/solavvgs-ikt/status-display
 
 jobs:
   build:
@@ -35,25 +35,27 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
+          # Vi lager flere tagger:
+          # - latest (alltid)
+          # - branch-<sha>
+          # - pr-<sha>
+          # - sha (full sha)
+          # - semver hvis du en dag lager git tag v1.2.3
           tags: |
-            # tag for branch med kort sha, f.eks. main-<sha7>
             type=ref,event=branch,suffix=-{{sha}}
-            # tag for PR
             type=ref,event=pr,suffix=-{{sha}}
-            # semver tags hvis du tagger releases som v1.2.3
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            # ren sha
             type=sha
           flavor: |
             latest=true
 
-      - name: Build and push (multi-arch optional)
+      - name: Build and push (multi-arch)
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          # Fjern/endre til bare linux/amd64 hvis du ikke trenger arm64
+          # Bygg for både Intel/AMD og ARM (trygt for de fleste miljøer)
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
